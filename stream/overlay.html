@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shitter Bob — Trading Desk</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:   #00ff41;
+    --dimgreen: #00aa2a;
+    --red:     #ff3131;
+    --yellow:  #ffe600;
+    --bg:      #000000;
+    --bg2:     #0a0a0a;
+    --border:  #1a3a1a;
+    --font:    'Share Tech Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 13px;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    grid-template-columns: 1fr 340px;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  /* ---- TOP BAR ---- */
+  #topbar {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    border: 1px solid var(--border);
+    padding: 0 16px;
+    background: var(--bg2);
+    position: relative;
+  }
+  #topbar .logo {
+    font-size: 20px;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-shadow: 0 0 12px var(--green);
+  }
+  .stat { display: flex; flex-direction: column; align-items: flex-start; }
+  .stat .label { font-size: 9px; color: var(--dimgreen); text-transform: uppercase; }
+  .stat .value { font-size: 15px; }
+  .stat .value.pos { color: var(--green); }
+  .stat .value.neg { color: var(--red); }
+  .stat .value.burn { color: var(--yellow); }
+  #scanline {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px,
+      rgba(0,255,65,0.03) 2px, rgba(0,255,65,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* ---- MAIN PANEL ---- */
+  #main {
+    display: grid;
+    grid-template-rows: 1fr 1fr 120px;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .panel {
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-title {
+    font-size: 9px;
+    color: var(--dimgreen);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .panel-body { flex: 1; overflow-y: auto; padding: 4px 8px; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-track { background: var(--bg); }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--dimgreen); }
+
+  /* Scanner rows */
+  .scan-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 50px 60px;
+    gap: 8px;
+    align-items: center;
+    padding: 3px 0;
+    border-bottom: 1px solid #0d1a0d;
+  }
+  .scan-row .sym { color: var(--green); font-weight: bold; }
+  .meme-bar-wrap { background: #001a00; height: 8px; border-radius: 2px; overflow: hidden; }
+  .meme-bar { height: 100%; background: var(--green); transition: width 0.5s; }
+  .meme-bar.hot { background: var(--yellow); }
+  .meme-bar.fire { background: var(--red); }
+  .scan-row .bc { color: var(--dimgreen); font-size: 11px; }
+  .scan-row .score { font-size: 11px; }
+
+  /* Positions table */
+  .pos-row {
+    display: grid;
+    grid-template-columns: 70px 70px 70px 70px 1fr;
+    gap: 4px;
+    padding: 3px 0;
+    border-bottom: 1px solid #0d1a0d;
+    font-size: 11px;
+    align-items: center;
+  }
+  .pos-row .hdr { color: var(--dimgreen); font-size: 9px; }
+  .pos-row .win { color: var(--green); }
+  .pos-row .loss { color: var(--red); }
+  .pos-row .moon { color: var(--yellow); }
+  .exit-bar-wrap { background: #001a00; height: 6px; border-radius: 2px; overflow: hidden; }
+  .exit-bar { height: 100%; background: var(--dimgreen); }
+
+  /* Bob thought bubble */
+  #commentary {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--green);
+    text-shadow: 0 0 6px rgba(0,255,65,0.4);
+    word-break: break-word;
+  }
+  #commentary .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 14px;
+    background: var(--green);
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+  @keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0 } }
+
+  /* ---- SIDEBAR ---- */
+  #sidebar {
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  /* Chat messages */
+  .chat-msg {
+    padding: 3px 0;
+    border-bottom: 1px solid #0d1a0d;
+    font-size: 11px;
+  }
+  .chat-msg .handle { color: var(--yellow); }
+  .chat-msg .platform { color: var(--dimgreen); font-size: 9px; }
+  .chat-msg .text { color: #ccffcc; }
+
+  /* Burn history */
+  .burn-row {
+    padding: 3px 0;
+    border-bottom: 1px solid #0d1a0d;
+    font-size: 11px;
+  }
+  .burn-row .amt { color: var(--yellow); }
+  .burn-row .pct { color: var(--red); }
+  .burn-row .time { color: var(--dimgreen); font-size: 9px; }
+
+  /* CRT vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center,
+      transparent 60%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 999;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">&#x26A1; SHITTER BOB</div>
+  <div class="stat">
+    <span class="label">Balance</span>
+    <span class="value pos" id="stat-balance">-- SOL</span>
+  </div>
+  <div class="stat">
+    <span class="label">PnL Today</span>
+    <span class="value" id="stat-pnl">+0.000 SOL</span>
+  </div>
+  <div class="stat">
+    <span class="label">Burned</span>
+    <span class="value burn" id="stat-burned">0.000 SOL</span>
+  </div>
+  <div class="stat">
+    <span class="label">Next Burn</span>
+    <span class="value burn" id="stat-nextburn">30:00</span>
+  </div>
+  <div class="stat">
+    <span class="label">Positions</span>
+    <span class="value" id="stat-positions">0</span>
+  </div>
+  <div id="scanline"></div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- Scanner -->
+  <div class="panel">
+    <div class="panel-title">&#x25B6; pump.fun scanner — live</div>
+    <div class="panel-body" id="scanner-list"></div>
+  </div>
+
+  <!-- Positions -->
+  <div class="panel">
+    <div class="panel-title">&#x25B6; active positions</div>
+    <div class="panel-body" id="positions-list">
+      <div class="pos-row">
+        <span class="hdr">token</span>
+        <span class="hdr">entry</span>
+        <span class="hdr">now</span>
+        <span class="hdr">pnl%</span>
+        <span class="hdr">target</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bob commentary -->
+  <div class="panel">
+    <div class="panel-title">&#x25B6; bob's brain</div>
+    <div class="panel-body">
+      <div id="commentary">initializing shitter bob... <span class="cursor"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <!-- Chat -->
+  <div class="panel">
+    <div class="panel-title">&#x25B6; chat — tg + x</div>
+    <div class="panel-body" id="chat-list"></div>
+  </div>
+
+  <!-- Burn history -->
+  <div class="panel">
+    <div class="panel-title">&#x25B6; burn log &#x1F525;</div>
+    <div class="panel-body" id="burn-list"></div>
+  </div>
+</div>
+
+<script>
+const WS_URL = 'ws://localhost:3030/ws';
+let ws, reconnectTimer;
+let totalBurnedSol = 0;
+let burnCycleStart = Date.now();
+const BURN_INTERVAL = 30 * 60 * 1000;
+
+function connect() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen  = () => { console.log('[overlay] WS connected'); clearTimeout(reconnectTimer); };
+  ws.onclose = () => { reconnectTimer = setTimeout(connect, 2000); };
+  ws.onmessage = (e) => {
+    try { handleEvent(JSON.parse(e.data)); } catch(_) {}
+  };
+}
+
+function handleEvent(ev) {
+  switch (ev.type) {
+    case 'balance':      updateBalance(ev.payload); break;
+    case 'scan_update':  updateScanner(ev.payload); break;
+    case 'position_update': updatePositions(ev.payload); break;
+    case 'commentary':   updateCommentary(ev.payload); break;
+    case 'token':        appendCommentaryToken(ev.payload); break;
+    case 'burn':         updateBurn(ev.payload); break;
+    case 'chat_message': addChatMessage(ev.payload); break;
+  }
+}
+
+function updateBalance({ sol, pnlToday }) {
+  const pnlEl = document.getElementById('stat-pnl');
+  document.getElementById('stat-balance').textContent = sol.toFixed(4) + ' SOL';
+  pnlEl.textContent = (pnlToday >= 0 ? '+' : '') + pnlToday.toFixed(4) + ' SOL';
+  pnlEl.className = 'value ' + (pnlToday >= 0 ? 'pos' : 'neg');
+}
+
+function updateScanner(items) {
+  const list = document.getElementById('scanner-list');
+  list.innerHTML = items.map(item => {
+    const barClass = item.memeScore >= 80 ? 'fire' : item.memeScore >= 60 ? 'hot' : '';
+    return `<div class="scan-row">
+      <span class="sym">${item.symbol}</span>
+      <div class="meme-bar-wrap"><div class="meme-bar ${barClass}" style="width:${item.memeScore}%"></div></div>
+      <span class="bc">${item.bondingCurvePct.toFixed(0)}%</span>
+      <span class="score">${item.memeScore}/100</span>
+    </div>`;
+  }).join('');
+}
+
+let positionsMap = {};
+function updatePositions(pos) {
+  if (Array.isArray(pos)) {
+    positionsMap = {};
+    pos.forEach(p => positionsMap[p.mint] = p);
+  } else {
+    positionsMap[pos.mint] = pos;
+  }
+  const positions = Object.values(positionsMap).filter(p => p.status !== 'closed');
+  document.getElementById('stat-positions').textContent = positions.length;
+  const list = document.getElementById('positions-list');
+  const rows = positions.map(p => {
+    const pnlPct = p.currentPrice > 0
+      ? ((p.currentPrice - p.entryPrice) / p.entryPrice * 100)
+      : 0;
+    const pnlClass = pnlPct >= 0 ? 'win' : 'loss';
+    const moonTag = p.status === 'moonbag' ? '<span class="moon"> [MOON]</span>' : '';
+    const targetPct = p.entryPrice > 0
+      ? Math.min(100, (p.currentPrice / p.quickExitTarget) * 100)
+      : 0;
+    return `<div class="pos-row">
+      <span>${p.symbol}${moonTag}</span>
+      <span>${p.entryPrice.toFixed(6)}</span>
+      <span>${(p.currentPrice||0).toFixed(6)}</span>
+      <span class="${pnlClass}">${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%</span>
+      <div class="exit-bar-wrap"><div class="exit-bar" style="width:${targetPct}%"></div></div>
+    </div>`;
+  }).join('');
+  list.innerHTML = `<div class="pos-row">
+    <span class="hdr">token</span><span class="hdr">entry</span>
+    <span class="hdr">now</span><span class="hdr">pnl%</span><span class="hdr">target</span>
+  </div>` + rows;
+}
+
+let commentaryBuffer = '';
+function updateCommentary(text) {
+  commentaryBuffer = text;
+  document.getElementById('commentary').innerHTML =
+    text + '<span class="cursor"></span>';
+}
+function appendCommentaryToken(token) {
+  commentaryBuffer += token;
+  document.getElementById('commentary').innerHTML =
+    commentaryBuffer + '<span class="cursor"></span>';
+  // Auto-scroll
+  const el = document.getElementById('commentary').parentElement;
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateBurn({ amountLamports, burnPct, txHash, timestamp }) {
+  const sol = Number(amountLamports) / 1e9;
+  totalBurnedSol += sol;
+  burnCycleStart = Date.now();
+  document.getElementById('stat-burned').textContent = totalBurnedSol.toFixed(4) + ' SOL';
+  const list = document.getElementById('burn-list');
+  const row = document.createElement('div');
+  row.className = 'burn-row';
+  row.innerHTML = `<span class="amt">-${sol.toFixed(4)} SOL</span> ` +
+    `<span class="pct">(${burnPct}%)</span><br>` +
+    `<span class="time">${new Date(timestamp).toLocaleTimeString()}</span>`;
+  list.prepend(row);
+}
+
+function addChatMessage({ platform, user, text }) {
+  const list = document.getElementById('chat-list');
+  const msg  = document.createElement('div');
+  msg.className = 'chat-msg';
+  msg.innerHTML = `<span class="platform">[${platform}]</span> ` +
+    `<span class="handle">@${user}</span><br>` +
+    `<span class="text">${text.slice(0, 120)}</span>`;
+  list.prepend(msg);
+  // Keep last 20 messages
+  while (list.children.length > 20) list.removeChild(list.lastChild);
+}
+
+// Burn countdown timer
+setInterval(() => {
+  const elapsed = Date.now() - burnCycleStart;
+  const remaining = Math.max(0, BURN_INTERVAL - elapsed);
+  const m = Math.floor(remaining / 60000);
+  const s = Math.floor((remaining % 60000) / 1000);
+  document.getElementById('stat-nextburn').textContent =
+    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}, 1000);
+
+connect();
+</script>
+</body>
+</html>
