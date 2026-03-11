@@ -33,7 +33,7 @@ const FORBIDDEN_DISCRIMINATORS = new Set([
 const PRIVKEY_PATTERN = /[1-9A-HJ-NP-Za-km-z]{87,88}/g;
 
 export function redactPrivkey(text: string): string {
-  return text.replace(PRIVKEY_PATTERN, '[REDACTED -- nice try]');
+  return text.replace(PRIVKEY_PATTERN, '[REDACTED — nice try]');
 }
 
 // -------------------------------------------------------
