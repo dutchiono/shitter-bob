@@ -1,0 +1,7 @@
+.env
+node_modules/
+dist/
+*.js.map
+logs/
+bob-wallet.json
+*.key
