@@ -1,0 +1,25 @@
+{
+  "name": "shitter-bob",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "core",
+    "persona",
+    "stream",
+    "web",
+    "bot",
+    "scripts"
+  ],
+  "scripts": {
+    "dev": "concurrently -n core,stream,bot -c cyan,yellow,magenta 'bun run --cwd core dev' 'bun run --cwd stream dev' 'bun run --cwd bot dev'",
+    "build": "bun run --cwd shared build && bun run --cwd core build && bun run --cwd persona build && bun run --cwd stream build && bun run --cwd bot build",
+    "db:migrate": "bun run --cwd scripts migrate",
+    "burn": "bun run --cwd scripts burn"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.7"
+  }
+}
