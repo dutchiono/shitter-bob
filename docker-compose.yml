@@ -1,0 +1,116 @@
+# =============================================================
+# docker-compose.yml — Shitter Bob full stack
+# docker compose up -d
+# =============================================================
+
+version: '3.9'
+
+services:
+
+  # -----------------------------------------------------------
+  # Postgres — internal only, never exposed publicly
+  # -----------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       shitterbob
+      POSTGRES_USER:     bob
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/migrate.sql:/docker-entrypoint-initdb.d/migrate.sql
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bob -d shitterbob"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # Core engine — scanner + trading + burn loop
+  # -----------------------------------------------------------
+  core:
+    build:
+      context: .
+      dockerfile: core/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bob:${POSTGRES_PASSWORD}@db:5432/shitterbob
+    networks:
+      - internal
+    volumes:
+      - ./logs/core:/app/logs
+
+  # -----------------------------------------------------------
+  # Stream overlay server — serves overlay.html + WS on :3030
+  # OBS Browser Source points to http://localhost:3030
+  # -----------------------------------------------------------
+  stream:
+    build:
+      context: .
+      dockerfile: stream/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - core
+    ports:
+      - "3030:3030"      # localhost only — do NOT expose publicly
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bob:${POSTGRES_PASSWORD}@db:5432/shitterbob
+    networks:
+      - internal
+
+  # -----------------------------------------------------------
+  # Telegram + X bots
+  # -----------------------------------------------------------
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - core
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bob:${POSTGRES_PASSWORD}@db:5432/shitterbob
+    networks:
+      - internal
+
+  # -----------------------------------------------------------
+  # Public API — read-only REST for Next.js dashboard
+  # Exposed on :4000 behind nginx/Cloudflare
+  # -----------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: web/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4000:4000"   # nginx proxies this
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bob:${POSTGRES_PASSWORD}@db:5432/shitterbob
+      PORT: "4000"
+      READ_ONLY: "true"
+    networks:
+      - internal
+      - external
+
+volumes:
+  pgdata:
+
+networks:
+  internal:
+    driver: bridge
+    internal: true   # core/bot/stream can't reach internet directly
+  external:
+    driver: bridge
